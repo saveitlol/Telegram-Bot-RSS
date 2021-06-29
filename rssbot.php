@@ -1,4 +1,4 @@
-<?php 
+<?php
 /* 
 *
 * Fungsi: Menyampaikan Posting Blog Baru ke Grup/Kanal Telegram
@@ -10,13 +10,13 @@
 * Thanks to: @manzoorwanijk
 *
 */
-/* Token API Telegram. Dari @BotFather */ 
-$token = 'ABCDEFGHIJKLMNOPQRTSUVWXYZ:1234567890';
+/* Token API Telegram. Dari @BotFather */
+$token = 'isi token bot';
 
 /* Isi Dengan Grup ID */
-$chat = '-1234567890';
+$chat = 'chat id';
 /* Sumber RSS Feed */
-$rss = 'https://feeds.feedburner.com/personalblogid';
+$rss = 'https://yts.mx/rss';
 
 /* Log Disimpan */
 $log_file = 'bot-rss.log';
@@ -25,7 +25,7 @@ $log_file = 'bot-rss.log';
 $pid_file = 'bot-rss.pid';
 
 /* Timer Waktu */
-$wait = 120;
+$wait = 60;
 
 /* Waktu */
 $max_age_articles = time() - 240;
@@ -35,7 +35,7 @@ $last_send_title = "";
 
 /* Bot Berjalan */
 $time = date_default_timezone_set("ASIA/Jakarta");
-$log_text = "[$time] Berjalan... URL Feed: $rss".PHP_EOL;
+$log_text = "[$time] Berjalan... URL Feed: $rss" . PHP_EOL;
 file_put_contents($log_file, $log_text, FILE_APPEND | LOCK_EX);
 echo $log_text;
 /* Bot PID */
@@ -43,14 +43,15 @@ $pid = getmypid();
 file_put_contents($pid_file, $pid);
 
 /* API Pesan */
-function telegram_send_chat_message($token, $chat, $message, $reply_markup) {
+function telegram_send_chat_message($token, $chat, $message, $reply_markup)
+{
 	/* Jika Error */
 	$time = time();
 	/* URL Variabel */
 	$url = "https://api.telegram.org/bot$token/sendMessage?chat_id=$chat&reply_markup=$reply_markup";
 	/* Pesan Terkirim */
-	$send_text=urlencode($message);
-	$url = $url ."&text=$send_text";
+	$send_text = urlencode($message);
+	$url = $url . "&text=$send_text";
 	//Mulai Sesi cURL 
 	$ch = curl_init();
 	$optArray = array(
@@ -62,7 +63,7 @@ function telegram_send_chat_message($token, $chat, $message, $reply_markup) {
 	/* Simpan Error Log */
 	if ($result == FALSE) {
 		$time = date("m-d-y H:i", time());
-		$log_text = "[$time] Kirim Pesan Error: $message".PHP_EOL;
+		$log_text = "[$time] Kirim Pesan Error: $message" . PHP_EOL;
 		file_put_contents($log_file, $log_text, FILE_APPEND | LOCK_EX);
 	}
 	curl_close($ch);
@@ -75,41 +76,41 @@ while (true) {
 	$current_time = time();
 	$articles = @simplexml_load_file($rss);
 	/* Lihat Log jika ada pesan error */
-	if ($articles === false) { 
+	if ($articles === false) {
 		$time = date("m-d-y H:i", $current_time);
-		$log_text = "[$time] Bot gagal menerima informasi $rss.".PHP_EOL;
+		$log_text = "[$time] Bot gagal menerima informasi $rss." . PHP_EOL;
 		file_put_contents($log_file, $log_text, FILE_APPEND | LOCK_EX);
-	/* Bot Membaca Berita Disampaikan */	
-	}else{
+		/* Bot Membaca Berita Disampaikan */
+	} else {
 		/* Menerima berita RSS */
 		$xmlArray = array();
 		foreach ($articles->channel->item as $item) $xmlArray[] = $item;
 		$xmlArray = array_reverse($xmlArray);
-		
+
 		/* Mulai putaran berita */
 		foreach ($xmlArray as $item) {
+			$time = date("m-d-y H:i", $current_time);
 			$timestamp_article = strtotime($item->pubDate);
 			/* Memeriksa Berita */
 			/* Jika ada Berita, Sampaikan.. */
-			if ($timestamp_article > $last_send and $last_send_title != $item->title) {
-				$message = ucfirst($item->category) . " - " . $item->title . PHP_EOL;
-				$message .= $item->link . PHP_EOL;
-				$reply_markup = json_encode( array(
+			if ($timestamp_article > $last_send and $last_send_title != $item->guid) {
+				$message = "/leech " . $item->enclosure['url'] . PHP_EOL;
+				$reply_markup = json_encode(array(
 					'inline_keyboard' => array(
 						array(
 							array(
-								'text' => '🔗 Baca Aku',
-								'url'  => urlencode( $item->link ),
+								'text' => '🌐 Visit ',
+								'url'  => urlencode($item->link),
 							)
 						)
 					),
-				) );
+				));
 				telegram_send_chat_message($token, $chat, $message, $reply_markup);
 				$last_send = $timestamp_article;
-				$last_send_title = $item->title;
+				$last_send_title = $item->guid;
+				print("[$time] " . $item->title . "\n");
 			}
 		}
 	}
 	sleep($wait);
 }
-?>
